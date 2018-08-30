@@ -4,22 +4,18 @@
       <div class="sidebar">
         <div class="card">
           <header>
-            <img class="avatar" width="40" height="40" alt="coffce" src="dist/images/1.jpg">
-            <p class="name">coffce</p>
+            <img class="avatar" width="40" height="40" alt="coffce" v-lazy="adminLogo">
+            <p class="name">仇益阳</p>
           </header>
           <footer>
-            <input class="search" type="text" placeholder="search user...">
+            <input class="search" type="text" placeholder="search user..." v-model="serchData">
           </footer>
         </div>
         <div class="list">
           <ul>
-            <li class="active">
-              <img class="avatar" width="30" height="30" alt="示例介绍" src="dist/images/2.png">
-              <p class="name">示例介绍</p>
-            </li>
-            <li>
-              <img class="avatar" width="30" height="30" alt="webpack" src="dist/images/3.jpg">
-              <p class="name">webpack</p>
+            <li :class="activeIndex==index?'active':''" v-for="(item,index) in chatList" :key="index" @click="select(item.id,index)">
+              <img class="avatar" width="30" height="30" alt="示例介绍" v-lazy="item.avarImg">
+              <p class="name">{{item.userNickname}}</p>
             </li>
           </ul>
         </div>
@@ -27,37 +23,30 @@
       <div class="main">
         <div class="message">
           <ul>
-            <li>
+            <li v-for="(item,index) in chatRecord" :key="index">
               <p class="time">
-                <span>0:20</span>
+                <span>{{item.timeData}}</span>
               </p>
-              <div class="main">
-                <img class="avatar" width="30" height="30" src="dist/images/2.png">
-                <div class="text">Hello，这是一个基于Vue + Vuex + Webpack构建的简单chat示例，聊天记录保存在localStorge, 有什么问题可以通过Github Issue问我。
+              <div class="other" v-for="(chatItem,chatIndex) in item.list" :key="chatIndex" :class="chatItem.id==userId?'self':''">
+                <img class="avatar" width="30" height="30" v-lazy="chatItem.avarLogo">
+                <div class="text">
+                  <p v-if="chatItem.status==1">
+                    {{chatItem.content}}
+                  </p>
+                  <div class="img" v-else>
+                    <img v-lazy="chatItem.img" alt="">
+                  </div>
                 </div>
-              </div>
-            </li>
-            <li>
-              <p class="time">
-                <span>0:20</span>
-              </p>
-              <div class="main_other">
-                <img class="avatar" width="30" height="30" src="dist/images/2.png">
-                <div class="text">项目地址: https:github.com/coffcer/vue-chat</div>
-              </div>
-            </li>
-            <li>
-              <p class="time">
-                <span>1:6</span>
-              </p>
-              <div class="main self">
-                <img class="avatar" width="30" height="30" src="dist/images/1.jpg">
-                <div class="text">121</div>
               </div>
             </li>
           </ul>
         </div>
-        <div class="text">
+        <div class="chartGroup">
+          <el-upload class="img-upload" style="display:none" :action="sevarUrl" :on-remove="upremove" :on-success="upSuccess">
+          </el-upload>
+          <i class="el-icon-picture" @click="upload"></i>
+        </div>
+        <div id="text">
           <textarea placeholder="按 Ctrl + Enter 发送"></textarea>
         </div>
       </div>
@@ -65,14 +54,85 @@
   </div>
 </template>
 <script>
-export default {};
+export default {
+  data() {
+    return {
+      serchData: "",
+      sevarUrl: "",
+      adminLogo: "../../static/1.jpg",
+      userId: "1",
+      personlOne: "../../static/2.png",
+      activeIndex: 0,
+      chatList: [
+        {
+          avarImg: "../../static/2.png",
+          userNickname: "仇益阳",
+          userId: "1"
+        },
+        {
+          avarImg: "../../static/3.png",
+          userNickname: "老时",
+          userId: "2"
+        }
+      ],
+      chatRecord: [
+        {
+          timeData: "11:20",
+          list: [
+            {
+              id: "1",
+              avarLogo: "../../static/1.jpg",
+              status: 1,
+              content:
+                "Hello，这是一个基于Vue + Vuex + Webpack构建的简单chat示例，聊天记录保存在localStorge, 有什么问题可以通过Github Issue问我",
+              img: "../../static/1.jpg"
+            },
+            {
+              id: "1",
+              avarLogo: "../../static/1.jpg",
+              status: 1,
+              content: "",
+              img: ""
+            },
+            {
+              id: "2",
+              avarLogo: "../../static/1.jpg",
+              status: 1,
+              content: "",
+              img: ""
+            }
+          ]
+        }
+      ]
+    };
+  },
+  methods: {
+    select(id, index) {
+      this.activeIndex = index;
+    },
+    upload() {
+      document.querySelector(".img-upload input").click();
+    },
+    //图片上传成功函数
+    upSuccess(response, file, fileList) {},
+    upremove(file, fileList) {}
+  }
+};
 </script>
 <style scoped>
-.sidebar {
+.wrap {
+  margin: 20px auto;
+  width: 800px;
+  height: 600px;
+  overflow: hidden;
+  border-radius: 3px;
+}
+.wrap .sidebar {
   float: left;
   width: 200px;
   color: #f4f4f4;
   background-color: #2e3238;
+  height: 100%;
 }
 .sidebar .card {
   padding: 12px;
@@ -100,43 +160,49 @@ export default {};
   outline: none;
   background-color: #26292e;
 }
-.list {
-}
-li {
+.list li {
   padding: 12px 15px;
   border-bottom: 1px solid #292c33;
   cursor: pointer;
   -webkit-transition: background-color 0.1s;
   transition: background-color 0.1s;
 }
-li.active {
+.list li.active {
   background-color: hsla(0, 0%, 100%, 0.1);
 }
-.avatar {
+.list .avatar {
   border-radius: 2px;
 }
-.name {
+.list .name {
   display: inline-block;
   margin: 0 0 0 15px;
 }
-.avatar,
-.name {
+.list .avatar,
+.list .name {
   vertical-align: middle;
 }
-
-.message {
+.wrap .main {
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  background-color: #eee;
+}
+.card footer {
+  margin-top: 10px;
+}
+.main .message {
   height: calc(100% - 160px);
   padding: 10px 15px;
   overflow-y: scroll;
 }
-li {
+.main .message li {
   margin-bottom: 15px;
 }
-.time {
+.main .message li .time {
   margin: 7px 0;
   text-align: center;
 }
-.time > span {
+.main .message li .time > span {
   display: inline-block;
   padding: 0 18px;
   font-size: 12px;
@@ -144,12 +210,12 @@ li {
   border-radius: 2px;
   background-color: #dcdcdc;
 }
-.avatar {
+.main .message li .avatar {
   float: left;
   margin: 0 10px 0 0;
   border-radius: 3px;
 }
-.text {
+.main .message li .text {
   display: inline-block;
   position: relative;
   padding: 0 10px;
@@ -162,7 +228,7 @@ li {
   background-color: #fafafa;
   border-radius: 4px;
 }
-.text:before {
+.main .message li .text:before {
   content: " ";
   position: absolute;
   top: 9px;
@@ -170,36 +236,31 @@ li {
   border: 6px solid transparent;
   border-right-color: #fafafa;
 }
-.self {
+.main .message li .self {
   text-align: right;
 }
-.avatar {
+.main .message li .self .avatar {
   float: right;
   margin: 0 0 0 10px;
 }
-.text {
+.main .message .self .text {
   background-color: #b2e281;
 }
-.text:before {
+.main .message .self .text:before {
   right: inherit;
   left: 100%;
   border-right-color: transparent;
   border-left-color: #b2e281;
 }
-.main {
-  position: relative;
-  overflow: hidden;
-  background-color: #eee;
-}
-.text {
+.wrap #text {
   position: absolute;
   width: 100%;
   bottom: 0;
   left: 0;
-  height: 160px;
+  height: 130px;
   border-top: 1px solid #ddd;
 }
-textarea {
+.wrap #text textarea {
   padding: 10px;
   height: 100%;
   width: 100%;
@@ -208,12 +269,28 @@ textarea {
   font-family: Micrsofot Yahei;
   resize: none;
 }
-.wrap {
-  margin: 20px auto;
-  width: 800px;
-  height: 600px;
-  overflow: hidden;
-  border-radius: 3px;
+.chartGroup {
+  width: 100%;
+  height: 30px;
+  padding: 0px 20px;
+  line-height: 30px;
+  background-color: rgba(255, 255, 255, 1);
+}
+.chartGroup .el-icon-picture {
+  font-size: 20px;
+  line-height: 30px;
+}
+.other {
+  margin-top: 15px;
+}
+.other .img {
+  max-width: 200px;
+  height: auto;
+  padding: 10px 0;
+}
+.other .img img {
+  width: 100%;
+  height: auto;
 }
 </style>
 
