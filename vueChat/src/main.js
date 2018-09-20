@@ -74,6 +74,35 @@ Vue.config.productionTip = false
 Vue.use(ElementUI);
 Vue.prototype.$ajax = axios
 Vue.prototype.qs = qs
+
+
+import websdk from 'easemob-websdk'
+let webIM = window.WebIM = websdk
+Vue.prototype.$WebIM = webIM
+// const imConn = new webIM.connection({
+//   isMultiLoginSessions: webIM.config.isMultiLoginSessions,
+//   https: typeof webIM.config.https === 'boolean' ? webIM.config.https : location.protocol === 'https:',
+//   url: webIM.config.xmppURL,
+//   isAutoLogin: true,
+//   heartBeatWait: webIM.config.heartBeatWait,
+//   autoReconnectNumMax: webIM.config.autoReconnectNumMax,
+//   autoReconnectInterval: webIM.config.autoReconnectInterval,
+//   apiUrl: webIM.config.apiURL
+// })
+const imConn = new WebIM.connection({
+  isMultiLoginSessions: WebIM.config.isMultiLoginSessions,
+  https: typeof WebIM.config.https === 'boolean' ? WebIM.config.https : location.protocol === 'https:',
+  url: WebIM.config.xmppURL,
+  heartBeatWait: WebIM.config.heartBeatWait,
+  autoReconnectNumMax: WebIM.config.autoReconnectNumMax,
+  autoReconnectInterval: WebIM.config.autoReconnectInterval,
+  apiUrl: WebIM.config.apiURL,
+  isAutoLogin: true
+});
+Vue.prototype.$imConn = imConn
+
+
+
 /* eslint-disable no-new */
 new Vue({
   el: '#app',

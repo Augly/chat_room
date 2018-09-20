@@ -76,6 +76,23 @@ export default {
                   type: "success",
                   center: true
                 });
+                // console.log()
+                localStorage.setItem(
+                  "hx_userName",
+                  response.data.data.userInfo.nickname
+                );
+
+                localStorage.setItem(
+                  "hx_pwd",
+                  response.data.data.userInfo.password
+                );
+
+                this.$imConn.open({
+                  apiUrl: WebIM.config.apiURL,
+                  user: response.data.data.userInfo.nickname,
+                  pwd: response.data.data.userInfo.password,
+                  appKey: WebIM.config.appkey
+                });
                 this.$router.push("/index");
               } else {
                 this.$message.error("账号密码错误");
@@ -116,8 +133,8 @@ export default {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 300px;
-  height: 160px;
+  width: 360px;
+  /* height: 160px; */
   margin: -150px 0 0 -190px;
   padding: 40px;
   border-radius: 5px;
