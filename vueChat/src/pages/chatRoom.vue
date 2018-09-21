@@ -15,7 +15,7 @@
           <ul>
             <li :class="activeIndex==index?'active':''" v-for="(item,index) in chatList" :key="index" @click="select(item.id,index)">
               <img class="avatar" width="30" height="30" alt="示例介绍" v-lazy="item.avarImg">
-              <p class="name">{{item.userNickname}}</p>
+              <p class="name">{{item.name}}</p>
             </li>
           </ul>
         </div>
@@ -63,18 +63,7 @@ export default {
       userId: "1",
       personlOne: "../../static/2.png",
       activeIndex: 0,
-      chatList: [
-        {
-          avarImg: "../../static/2.png",
-          userNickname: "仇益阳",
-          userId: "1"
-        },
-        {
-          avarImg: "../../static/3.png",
-          userNickname: "老时",
-          userId: "2"
-        }
-      ],
+      chatList: 0,
       chatRecord: [
         {
           timeData: "11:20",
@@ -106,8 +95,7 @@ export default {
       ]
     };
   },
-  mounted() {},
-  created() {
+  mounted() {
     //环信登录
 
     // var register = function() {
@@ -136,18 +124,19 @@ export default {
       localStorage["hx_pwd"] != null
     ) {
       console.log(111);
-      this.$imConn.open({
-        apiUrl: WebIM.config.apiURL,
-        user: localStorage["hx_userName"],
-        pwd: localStorage["hx_pwd"],
-        appKey: WebIM.config.appkey
-      });
+      // this.$imConn.open({
+      //   apiUrl: WebIM.config.apiURL,
+      //   user: localStorage["hx_userName"],
+      //   pwd: localStorage["hx_pwd"],
+      //   appKey: WebIM.config.appkey
+      // });
     }
 
     var that = this;
     // console.log(this.$imConn);
     this.$imConn.listen({
       onOpened: function(message) {
+        // console.log(message);
         console.log("连接成功!");
         //连接成功回调
         // 如果isAutoLogin设置为false，那么必须手动设置上线，否则无法收消息
@@ -162,7 +151,7 @@ export default {
         console.log("收到文本信息!");
       }, //收到文本消息
       onEmojiMessage: function(message) {
-        console.log("收到表情信息!");
+        console.log("收到表情信息!" + message);
       }, //收到表情消息
       onPictureMessage: function(message) {
         console.log("收到图片信息");
@@ -188,7 +177,7 @@ export default {
           },
           onFileDownloadComplete: function(response) {
             var objectURL = WebIM.utils.parseDownloadResponse.call(
-              conn,
+              this.$imConn,
               response
             );
             node.src = objectURL;
@@ -197,9 +186,11 @@ export default {
             console.log("File down load error.");
           }
         };
-        WebIM.utils.download.call(conn, option);
+        WebIM.utils.download.call(this.$imConn, option);
       }, //收到视频消息
       onPresence: function(message) {
+        //添加好友函数
+        this.addFriends(message);
         console.log("处理广播信息!");
       }, //处理“广播”或“发布-订阅”消息，如联系人订阅请求、处理群组、聊天室被踢解散等消息
       onRoster: function(message) {
@@ -240,8 +231,125 @@ export default {
         );
       } //如果用户在A群组被禁言，在A群发消息会走这个回调并且消息不会传递给群其它成员
     });
+
+    // ===========================添加/删除好友请求====================
+    //easemobwebim-sdk中收到联系人订阅请求的处理方法，具体的type值所对应的值请参考xmpp协议规范
+    // var handlePresence = function(e) {
+    //   //（发送者希望订阅接收者的出席信息），即别人申请加你为好友
+    //   if (e.type === "subscribe") {
+    //     //若e.status中含有[resp:true],则表示为对方同意好友后反向添加自己为好友的消息，demo中发现此类消息，默认同意操作，完成双方互为好友；如果不含有[resp:true]，则表示为正常的对方请求添加自己为好友的申请消息。
+    //   }
+
+    //   //(发送者允许接收者接收他们的出席信息)，即别人同意你加他为好友
+    //   if (e.type === "subscribed") {
+    //   }
+
+    //   //（发送者取消订阅另一个实体的出席信息）,即删除现有好友
+    //   if (e.type === "unsubscribe") {
+    //   }
+
+    //   //（订阅者的请求被拒绝或以前的订阅被取消），即对方单向的删除了好友
+    //   if (e.type === "unsubscribed") {
+    //   }
+    // };
+
+    // ============添加好友============
+    // 添加好友
+    // var addFriends = function() {
+    //   this.$imConn.subscribe({
+    //     to: "username",
+    //     // Demo里面接收方没有展现出来这个message，在status字段里面
+    //     message: "加个好友呗!"
+    //   });
+    // };
+  },
+  created() {
+    console.log(this.chatList, 111);
+    let that = this;
+    console.log(55555);
+
+    //获取我的好友列表
+    console.log(55555);
+    setTimeout(function() {
+      console.log(121);
+      console.log(that.$imConn.getRoster);
+      that.$imConn.getRoster({
+        success: function(roster) {
+          let that = this;
+          this.chatList = roster;
+          console.log(roster);
+          // for (var i = 0, l = roster.length; i < l; i++) {
+          //   console.log(22121212121);
+          //   var ros = roster[i];
+          //   console.log(ros);
+          //   //ros.subscription值为both/to为要显示的联系人，此处与APP需保持一致，才能保证两个客户端登录后的好友列表一致
+          //   if (ros.subscription === "both" || ros.subscription === "to") {
+          //     this.chatList.push(ros);
+          //     console.log(this.chatList);
+          //   }
+          // }
+          // console.log(this.chatList);
+        }
+      });
+    }, 2000);
+
+    console.log(this.chatList);
   },
   methods: {
+    // 单聊发送文本消息
+    sendPrivateText() {
+      var id = this.$imConn.getUniqueId(); // 生成本地消息id
+      var msg = new WebIM.message("txt", id); // 创建文本消息
+      msg.set({
+        msg: "message content", // 消息内容
+        to: "username", // 接收消息对象（用户id）
+        roomType: false,
+        success: function(id, serverMsgId) {
+          console.log("send private text Success");
+        },
+        fail: function(e) {
+          console.log("Send private text error");
+        }
+      });
+      msg.body.chatType = "singleChat";
+      this.$imConn.send(msg.body);
+    },
+    //收到联系人订阅请求的处理方法，具体的type值所对应的值请参考xmpp协议规范
+    handlePresence(e) {
+      //对方收到请求加为好友
+      if (e.type === "subscribe") {
+        /*同意添加好友操作的实现方法*/
+        this.$imConn.subscribed({
+          to: "username",
+          message: "[resp:true]"
+        });
+        this.$imConn.subscribe({
+          //需要反向添加对方好友
+          to: e.from,
+          message: "[resp:true]"
+        });
+        /*拒绝添加好友的方法处理*/
+        this.$imConn.unsubscribed({
+          to: "username",
+          message: "rejectAddFriend"
+        });
+      }
+    },
+    // 删除好友
+    removeFriends() {
+      this.$imConn.removeRoster({
+        to: "username",
+        success: function() {
+          // 删除成功
+          this.$imConn.unsubscribed({
+            to: "username"
+          });
+        },
+        error: function() {
+          // 删除失败
+        }
+      });
+    },
     sumbit() {
       //发送信息
       alert(11);
