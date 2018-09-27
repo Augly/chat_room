@@ -59,7 +59,45 @@
 </template>
 <script>
 // let conversationType = 1;
+/**
+ * 时间转换
+ */
+function timeFormatNotime(time) {
+  var date = new Date(time),
+    curDate = new Date(),
+    year = date.getFullYear(),
+    month = date.getMonth() + 1,
+    day = date.getDate(),
+    hour = date.getHours(),
+    minute = date.getMinutes(),
+    curYear = curDate.getFullYear(),
+    curHour = curDate.getHours(),
+    timeStr;
+  if (minute < 10) {
+    minute = "0" + minute;
+  }
+  if (year < curYear) {
+    timeStr = year + "年" + month + "月" + day + "日" + hour + ":" + minute;
+  } else {
+    var pastTime = curDate - date,
+      pastH = pastTime / 3600000;
 
+    if (pastH > curHour) {
+      timeStr = month + "月" + day + "日 " + "" + hour + "时" + minute + "分";
+    } else if (pastH >= 1) {
+      timeStr = "今天 " + hour + ":" + minute + "分";
+    } else {
+      var pastM = curDate.getMinutes() - minute;
+      if (pastM > 1) {
+        timeStr = pastM + "分钟前";
+      } else {
+        // timeStr = "刚刚";
+        timeStr = hour + ":" + minute + "分";
+      }
+    }
+  }
+  return timeStr;
+}
 export default {
   data() {
     return {
@@ -95,6 +133,39 @@ export default {
   mounted() {
     var that = this;
     console.log(that);
+    var token =
+      "Cg089/KnN+UG5zDbfNaT8nxpRjANxKgfakOnYLFljI84o3S6vq9b1qU38HtoHDQNsup+oz7gz38grlBqS2ugAw==";
+    RongIMClient.setConnectionStatusListener({
+      onChanged: function(status) {
+        switch (status) {
+          case RongIMLib.ConnectionStatus.CONNECTED:
+            console.log("链接成功");
+
+            console.log(that.userId);
+            that.getConversationList();
+            that.getUnreadCount();
+            that.getTotalUnreadCount();
+
+            break;
+          case RongIMLib.ConnectionStatus.CONNECTING:
+            console.log("正在链接");
+            break;
+          case RongIMLib.ConnectionStatus.DISCONNECTED:
+            console.log("断开连接");
+            break;
+          case RongIMLib.ConnectionStatus.KICKED_OFFLINE_BY_OTHER_CLIENT:
+            console.log("其他设备登录");
+            break;
+          case RongIMLib.ConnectionStatus.DOMAIN_INCORRECT:
+            console.log("域名不正确");
+            break;
+          case RongIMLib.ConnectionStatus.NETWORK_UNAVAILABLE:
+            console.log("网络不可用");
+            break;
+        }
+      }
+    });
+
     // 消息监听器
     RongIMClient.setOnReceiveMessageListener({
       // 接收到的消息
@@ -104,17 +175,27 @@ export default {
         switch (message.messageType) {
           case RongIMClient.MessageType.TextMessage:
             console.log(message.content.content);
-            that.$notify({
-              title: "提示",
-              message: message.targetId + "发来一条信息",
-              type: "success"
-            });
-            for (let n = 0; n < that.chatList.length; n++) {
-              if (that.chatList[n].targetId == message.targetId) {
-                that.chatList[n].record.push(message);
+            if (that.$route.name == "聊天室") {
+              that.$notify({
+                title: "提示",
+                message: message.targetId + "发来一条信息",
+                type: "success"
+              });
+              for (let n = 0; n < that.chatList.length; n++) {
+                if (that.chatList[n].targetId == message.targetId) {
+                  message.sentTime = timeFormatNotime(message.sentTime);
+                  that.chatList[n].record.push(message);
+                }
               }
+              that.scrollTop();
+            } else {
+              that.$notify({
+                title: "提示",
+                message: "你有新的消息,请前往聊天室查看",
+                type: "success"
+              });
             }
-            that.scrollTop();
+
             // alert(1);
             // message.content.content => 消息内容
             break;
@@ -162,22 +243,91 @@ export default {
         }
       }
     });
+    RongIMClient.connect(
+      token,
+      {
+        onSuccess: function(userId) {
+          console.log("Connect successfully." + userId);
+          that.userId = userId;
+          that.$store.commit({
+            type: "get_rcloud_userId",
+            userid: userId
+          });
+          var callback = {
+            onSuccess: function(userId) {
+              console.log("Reconnect successfully." + userId);
+              // localStorage.setItem['ry_userId'] = userId
+            },
+            onTokenIncorrect: function() {
+              console.log("token效");
+            },
+            onError: function(errorCode) {
+              console.log(errorcode);
+            }
+          };
+          var config = {
+            // 默认 false, true 启用自动重连，启用则为必选参数
+            auto: true,
+            // 重试频率 [100, 1000, 3000, 6000, 10000, 18000] 单位为毫秒，可选
+            url: "cdn.ronghub.com/RongIMLib-2.2.6.min.js",
+            // 网络嗅探地址 [http(s)://]cdn.ronghub.com/RongIMLib-2.2.6.min.js 可选
+            rate: [100, 1000, 3000, 6000, 10000]
+          };
+          RongIMClient.reconnect(callback, config);
+          // RongIMClient.getInstance().getConversationList({
+          //   onSuccess: function (list) {
+          //     console.log(list)
+          //     list = list
+          //     // list => 会话列表集合。
+          //   },
+          //   onError: function (error) {
+          //     // do something...
+          //   }
+          // }, null);
+        },
+        onTokenIncorrect: function() {
+          console.log("token无效");
+        },
+        onError: function(errorCode) {
+          var info = "";
+          switch (errorCode) {
+            case RongIMLib.ErrorCode.TIMEOUT:
+              info = "超时";
+              break;
+            case RongIMLib.ConnectionState.UNACCEPTABLE_PAROTOCOL_VERSION:
+              info = "不可接受的协议版本";
+              break;
+            case RongIMLib.ConnectionState.IDENTIFIER_REJECTED:
+              info = "appkey不正确";
+              break;
+            case RongIMLib.ConnectionState.SERVER_UNAVAILABLE:
+              info = "服务器不可用";
+              break;
+          }
+          console.log(errorCode);
+        }
+      }
+    );
   },
   created() {
     var that = this;
     // console.log(localStorage["ry_userId"]);
     // console.log(this.$store.state.rcloud_userId);
     // this.userId = this.$store.state.rcloud_userId;
-    let t = setInterval(function() {
-      console.log(that.$store.state.rcloud_userId);
-      if (that.$store.state.rcloud_userId != null) {
-        that.userId = that.$store.state.rcloud_userId;
-        that.getConversationList();
-        that.getUnreadCount();
-        that.getTotalUnreadCount();
-        clearInterval(t);
-      }
-    }, 1000);
+    // let t = setInterval(function() {
+    //   console.log(that.$store.state.rcloud_userId);
+    //   if (that.$store.state.rcloud_userId != null) {
+    //     that.userId = that.$store.state.rcloud_userId;
+    //     that.getConversationList();
+    //     that.getUnreadCount();
+    //     that.getTotalUnreadCount();
+    //     clearInterval(t);
+    //   }
+    // }, 1000);
+  },
+  destroyed() {
+    var start = new Date().getTime();
+    RongIMClient.getInstance().disconnect();
   },
   methods: {
     scrollTop() {
@@ -205,6 +355,7 @@ export default {
           console.log(message);
           for (let i = 0; i < that.chatList.length; i++) {
             if (that.chatList[i].check) {
+              message.sentTime = timeFormatNotime(message.sentTime);
               that.chatList[i].record.push(message);
             }
           }
@@ -274,20 +425,64 @@ export default {
 	 */
       var start = new Date().getTime();
       console.log(this.$userId);
-      RongIMClient.getInstance().getUnreadCount(
-        "PRIVATE",
-        localStorage["ry_userId"],
-        {
-          onSuccess: function(count) {
-            console.log("获取会话未读数成功", count, start);
+      RongIMClient.getInstance().getUnreadCount("PRIVATE", that.userId, {
+        onSuccess: function(count) {
+          console.log("获取会话未读数成功", count, start);
 
-            // console.log("获取会话未读数成功", count, start);
-          },
-          onError: function(error) {
-            // console.log("获取会话未读数失败", error, start);
-          }
+          // console.log("获取会话未读数成功", count, start);
+        },
+        onError: function(error) {
+          // console.log("获取会话未读数失败", error, start);
         }
-      );
+      });
+    },
+    //获取单一用户未读历史消息
+    getHistroyMessage() {
+      var that = this;
+      // alert(1);
+      /*
+	文档：http://www.rongcloud.cn/docs/web_api_demo.html#获取历史消息
+
+	注意事项：
+		1：一定一定一定要先开通 历史消息云存储 功能，本服务收费，测试环境可免费开通
+		2：登录开发者后台可以直接开启 https://developer.rongcloud.cn/app
+		2：timestrap第二次拉取必须为null才能实现循环拉取
+	*/
+      for (let n = 0; n < that.chatList.length; n++) {
+        if (that.chatList[n].unreadMessageCount != 0) {
+          var count = that.chatList[n].unreadMessageCount + 2; // 2 <= count <= 20
+          var timestrap = null; //0, 1483950413013
+          var conversationType = RongIMLib.ConversationType.PRIVATE;
+          var start = new Date().getTime();
+          RongIMClient.getInstance().getHistoryMessages(
+            conversationType,
+            that.chatList[n].targetId,
+            timestrap,
+            count,
+            {
+              onSuccess: function(list, hasMsg) {
+                //可通过sort订制其他顺序
+                list.sort(function(a, b) {
+                  return a.sentTime > b.sentTime;
+                });
+                console.log(list, 222222222);
+                for (let s = 0; s < list.length; s++) {
+                  list[s].sentTime = timeFormatNotime(list[s].sentTime);
+                  that.chatList[n].record.unshift(list[s]);
+                }
+
+                that.scrollTop();
+                // showResult("获取历史消息成功", list, start);
+              },
+              onError: function(error) {
+                // showResult("获取历史消息失败", error, start);
+              }
+            }
+          );
+        } else {
+          console.log(444);
+        }
+      }
     },
     //获取未读消息总条数
     getTotalUnreadCount() {
@@ -363,6 +558,7 @@ export default {
             list[that.activeIndex].check = true;
             that.targetId = list[that.activeIndex].targetId;
             that.chatList = list;
+            that.getHistroyMessage();
             // that.$notify({
             //   title: "成功",
             //   message: title,
@@ -387,6 +583,7 @@ export default {
         this.chatList[i].check = false;
       }
       this.chatList[index].check = true;
+      // this.getHistroyMessage();
       this.clearUnreadCount(targetId);
       this.scrollTop();
     },

@@ -51,6 +51,7 @@ export default {
   methods: {
     // 提交账户名和密码
     submitForm(formName) {
+      var that = this;
       this.$refs[formName].validate(valid => {
         if (valid) {
           this.$ajax
@@ -94,7 +95,48 @@ export default {
                   "hx_pwd",
                   response.data.data.imUserInfo.password
                 );
-                this.$router.push("/index");
+                var appKey = "n19jmcy59f1q9";
+                var token =
+                  "Cg089/KnN+UG5zDbfNaT8nxpRjANxKgfakOnYLFljI84o3S6vq9b1qU38HtoHDQNsup+oz7gz38grlBqS2ugAw==";
+                RongIMLib.RongIMClient.init(appKey);
+                //此接口必须在init()方法之后，连接融云服务器 connect 之前调用。
+                RongIMClient.getInstance().hasRemoteUnreadMessages(token, {
+                  onSuccess: function(hasMessage) {
+                    console.log(hasMessage);
+                    that.$router.push("/index");
+                    if (hasMessage) {
+                      that.$notify({
+                        title: "提示",
+                        message: "你有新的消息,请前往聊天室查看",
+                        type: "success"
+                      });
+                      RongIMClient.getInstance().getTotalUnreadCount({
+                        onSuccess: function(count) {
+                          console.log(count);
+                          // count => 所有会话总未读数。
+                        },
+                        onError: function(error) {
+                          // error => 获取总未读数错误码。
+                        }
+                      });
+                      // 有未读的消息
+                      // RongIMClient.getInstance().getTotalUnreadCount({
+                      //   onSuccess: function(count) {
+                      //     console.log(count);
+                      //     // count => 所有会话总未读数。
+                      //   },
+                      //   onError: function(error) {
+                      //     // error => 获取总未读数错误码。
+                      //   }
+                      // });
+                    } else {
+                      // 没有未读的消息
+                    }
+                  },
+                  onError: function(err) {
+                    // 错误处理...
+                  }
+                });
               } else {
                 this.$message.error("账号密码错误");
               }
