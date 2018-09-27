@@ -4,8 +4,8 @@
       <div class="sidebar">
         <div class="card">
           <header>
-            <img class="avatar" width="40" height="40" alt="coffce" v-lazy="adminLogo">
-            <p class="name">仇益阳</p>
+            <img class="avatar" width="40" height="40" alt="coffce" v-lazy="adminLogo" :key="adminLogo">
+            <p class="name">{{userId}}</p>
           </header>
           <footer>
             <input class="search" type="text" placeholder="search user..." v-model="serchData">
@@ -13,31 +13,35 @@
         </div>
         <div class="list">
           <ul>
-            <li :class="activeIndex==index?'active':''" v-for="(item,index) in chatList" :key="index" @click="select(item.id,index)">
-              <img class="avatar" width="30" height="30" alt="示例介绍" v-lazy="item.avarImg">
-              <p class="name">{{item.name}}</p>
+            <li :class="item.check?'active':''" v-for="(item,index) in chatList" :key="index" @click="select(item.targetId,index)">
+              <el-badge :value="item.unreadMessageCount" class="item" :hidden="item.unreadMessageCount==0">
+                <img class="avatar" width="30" height="30" alt="示例介绍" v-lazy="item.avarImg">
+              </el-badge>
+
+                <p class="name">{{item.targetId}}</p>
             </li>
           </ul>
         </div>
       </div>
       <div class="main">
         <div class="message">
-          <ul>
-            <li v-for="(item,index) in chatRecord" :key="index">
+          <ul v-for="(item,index) in chatList" :key="index" v-if="item.check">
+
+            <li v-for="(checkitem,checkindex) in item.record" :key="checkindex">
               <p class="time">
-                <span>{{item.timeData}}</span>
+                <span>{{checkitem.sentTime}}</span>
               </p>
-              <div class="other" v-for="(chatItem,chatIndex) in item.list" :key="chatIndex" :class="chatItem.id==userId?'self':''">
-                <img class="avatar" width="30" height="30" v-lazy="chatItem.avarLogo">
+              <div class="other" :class="checkitem.senderUserId==userId?'self':''">
+                <img class="avatar" width="30" height="30" v-lazy="checkitem.avarLogo" :key="checkitem.avarLogo">
                 <div class="text">
-                  <p v-if="chatItem.status==1">
-                    {{chatItem.content}}
+                  <p v-if="checkitem.objectName=='RC:TxtMsg'">
+                    {{checkitem.content.content}}
                   </p>
                   <div class="img" v-else>
-                    <img v-lazy="chatItem.img" alt="">
+                    <img v-lazy="checkitem.img" alt="">
+                  </div>
                   </div>
                 </div>
-              </div>
             </li>
           </ul>
         </div>
@@ -47,315 +51,344 @@
           <i class="el-icon-picture" @click="upload"></i>
         </div>
         <div id="text">
-          <textarea placeholder="按 Ctrl + Enter 发送" @keyup.ctrl.13="sumbit()"></textarea>
+          <textarea placeholder="按 Ctrl + Enter 发送" @keyup.ctrl.13="sumbit()" v-model="text"></textarea>
         </div>
       </div>
     </div>
   </div>
 </template>
 <script>
+// let conversationType = 1;
+
 export default {
   data() {
     return {
+      self: null,
+      adminTitle: "",
+      name: "",
+      text: "",
       serchData: "",
       sevarUrl: "",
       adminLogo: "../../static/1.jpg",
-      userId: "1",
+      userId: "加载中...",
       personlOne: "../../static/2.png",
       activeIndex: 0,
       chatList: 0,
+      targetId: null,
       chatRecord: [
+        // {
+        // timeData: "11:20",
+        // list: [
         {
-          timeData: "11:20",
-          list: [
-            {
-              id: "1",
-              avarLogo: "../../static/1.jpg",
-              status: 1,
-              content:
-                "Hello，这是一个基于Vue + Vuex + Webpack构建的简单chat示例，聊天记录保存在localStorge, 有什么问题可以通过Github Issue问我",
-              img: "../../static/1.jpg"
-            },
-            {
-              id: "1",
-              avarLogo: "../../static/1.jpg",
-              status: 1,
-              content: "",
-              img: ""
-            },
-            {
-              id: "2",
-              avarLogo: "../../static/1.jpg",
-              status: 1,
-              content: "",
-              img: ""
-            }
-          ]
+          id: "1",
+          avarLogo: "../../static/1.jpg",
+          status: 1,
+          content:
+            "Hello，这是一个基于Vue + Vuex + Webpack构建的简单chat示例，聊天记录保存在localStorge, 有什么问题可以通过Github Issue问我",
+          img: "../../static/1.jpg"
         }
+        // ]
+        // }
       ]
     };
   },
   mounted() {
-    //环信登录
-
-    // var register = function() {
-    //   var option = {
-    //     username: "bossffffsasdfasgrewgeg",
-    //     password: "a",
-    //     nickname: "clock",
-    //     appKey: WebIM.config.appkey,
-    //     success: function() {
-    //       console.log("regist success!");
-    //     },
-    //     error: function() {
-    //       console.log("regist error");
-    //     },
-    //     apiUrl: WebIM.config.apiURL
-    //   };
-    //   this.$imConn.signup(option);
-    // };
-    console.log(localStorage["hx_userName"], localStorage["hx_pwd"]);
-    if (
-      localStorage["hx_userName"] != "" &&
-      localStorage["hx_userName"] != undefined &&
-      localStorage["hx_userName"] != null &&
-      localStorage["hx_pwd"] != "" &&
-      localStorage["hx_pwd"] != undefined &&
-      localStorage["hx_pwd"] != null
-    ) {
-      console.log(111);
-      // this.$imConn.open({
-      //   apiUrl: WebIM.config.apiURL,
-      //   user: localStorage["hx_userName"],
-      //   pwd: localStorage["hx_pwd"],
-      //   appKey: WebIM.config.appkey
-      // });
-    }
-
     var that = this;
-    // console.log(this.$imConn);
-    this.$imConn.listen({
-      onOpened: function(message) {
-        // console.log(message);
-        console.log("连接成功!");
-        //连接成功回调
-        // 如果isAutoLogin设置为false，那么必须手动设置上线，否则无法收消息
-        // 手动上线指的是调用conn.setPresence(); 如果conn初始化时已将isAutoLogin设置为true
-        // 则无需调用conn.setPresence();
-      },
-      onClosed: function(message) {
-        console.log("连接关闭!");
-      }, //连接关闭回调
-      onTextMessage: function(message) {
-        console.log(message);
-        console.log("收到文本信息!");
-      }, //收到文本消息
-      onEmojiMessage: function(message) {
-        console.log("收到表情信息!" + message);
-      }, //收到表情消息
-      onPictureMessage: function(message) {
-        console.log("收到图片信息");
-      }, //收到图片消息
-      onCmdMessage: function(message) {
-        console.log("收到命令信息!");
-      }, //收到命令消息
-      onAudioMessage: function(message) {
-        console.log("收到音频信息");
-      }, //收到音频消息
-      onLocationMessage: function(message) {
-        console.log("收到位置信息");
-      }, //收到位置消息
-      onFileMessage: function(message) {
-        console.log("收到文件信息");
-      }, //收到文件消息
-      onVideoMessage: function(message) {
-        var node = document.getElementById("privateVideo");
-        var option = {
-          url: message.url,
-          headers: {
-            Accept: "audio/mp4"
-          },
-          onFileDownloadComplete: function(response) {
-            var objectURL = WebIM.utils.parseDownloadResponse.call(
-              this.$imConn,
-              response
-            );
-            node.src = objectURL;
-          },
-          onFileDownloadError: function() {
-            console.log("File down load error.");
-          }
-        };
-        WebIM.utils.download.call(this.$imConn, option);
-      }, //收到视频消息
-      onPresence: function(message) {
-        //添加好友函数
-        this.addFriends(message);
-        console.log("处理广播信息!");
-      }, //处理“广播”或“发布-订阅”消息，如联系人订阅请求、处理群组、聊天室被踢解散等消息
-      onRoster: function(message) {
-        console.log("处理好友申请");
-      }, //处理好友申请
-      onInviteMessage: function(message) {
-        console.log("处理群组邀请");
-      }, //处理群组邀请
-      onOnline: function() {
-        console.log("网络链接成功");
-      }, //本机网络连接成功
-      onOffline: function() {
-        console.log("网络掉线");
-      }, //本机网络掉线
-      onError: function(message) {
-        console.log("失败回调");
-      }, //失败回调
-      onBlacklistUpdate: function(list) {
-        //黑名单变动
-        // 查询黑名单，将好友拉黑，将好友从黑名单移除都会回调这个函数，list则是黑名单现有的所有好友信息
-        console.log(list);
-      },
-      onReceivedMessage: function(message) {
-        console.log("收到消息送达服务器回执");
-      }, //收到消息送达服务器回执
-      onDeliveredMessage: function(message) {
-        console.log("收到消息送达客户端回执");
-      }, //收到消息送达客户端回执
-      onReadMessage: function(message) {
-        console.log("收到消息已读回执");
-      }, //收到消息已读回执
-      onCreateGroup: function(message) {
-        console.log("创建群组成功回执（需调用createGroupNew）");
-      }, //创建群组成功回执（需调用createGroupNew）
-      onMutedMessage: function(message) {
-        console.log(
-          "如果用户在A群组被禁言，在A群发消息会走这个回调并且消息不会传递给群其它成员"
-        );
-      } //如果用户在A群组被禁言，在A群发消息会走这个回调并且消息不会传递给群其它成员
+    console.log(that);
+    // 消息监听器
+    RongIMClient.setOnReceiveMessageListener({
+      // 接收到的消息
+      onReceived: function(message) {
+        // 判断消息类型
+        console.log(RongIMClient.MessageType.TextMessage);
+        switch (message.messageType) {
+          case RongIMClient.MessageType.TextMessage:
+            console.log(message.content.content);
+            that.$notify({
+              title: "提示",
+              message: message.targetId + "发来一条信息",
+              type: "success"
+            });
+            for (let n = 0; n < that.chatList.length; n++) {
+              if (that.chatList[n].targetId == message.targetId) {
+                that.chatList[n].record.push(message);
+              }
+            }
+            that.scrollTop();
+            // alert(1);
+            // message.content.content => 消息内容
+            break;
+          case RongIMClient.MessageType.VoiceMessage:
+            // 对声音进行预加载
+            // message.content.content 格式为 AMR 格式的 base64 码
+            break;
+          case RongIMClient.MessageType.ImageMessage:
+            // message.content.content => 图片缩略图 base64。
+            // message.content.imageUri => 原图 URL。
+            break;
+          case RongIMClient.MessageType.DiscussionNotificationMessage:
+            // message.content.extension => 讨论组中的人员。
+            break;
+          case RongIMClient.MessageType.LocationMessage:
+            // message.content.latiude => 纬度。
+            // message.content.longitude => 经度。
+            // message.content.content => 位置图片 base64。
+            break;
+          case RongIMClient.MessageType.RichContentMessage:
+            // message.content.content => 文本消息内容。
+            // message.content.imageUri => 图片 base64。
+            // message.content.url => 原图 URL。
+            break;
+          case RongIMClient.MessageType.InformationNotificationMessage:
+            // do something...
+            break;
+          case RongIMClient.MessageType.ContactNotificationMessage:
+            // do something...
+            break;
+          case RongIMClient.MessageType.ProfileNotificationMessage:
+            // do something...
+            break;
+          case RongIMClient.MessageType.CommandNotificationMessage:
+            // do something...
+            break;
+          case RongIMClient.MessageType.CommandMessage:
+            // do something...
+            break;
+          case RongIMClient.MessageType.UnknownMessage:
+            // do something...
+            break;
+          default:
+          // do something...
+        }
+      }
     });
-
-    // ===========================添加/删除好友请求====================
-    //easemobwebim-sdk中收到联系人订阅请求的处理方法，具体的type值所对应的值请参考xmpp协议规范
-    // var handlePresence = function(e) {
-    //   //（发送者希望订阅接收者的出席信息），即别人申请加你为好友
-    //   if (e.type === "subscribe") {
-    //     //若e.status中含有[resp:true],则表示为对方同意好友后反向添加自己为好友的消息，demo中发现此类消息，默认同意操作，完成双方互为好友；如果不含有[resp:true]，则表示为正常的对方请求添加自己为好友的申请消息。
-    //   }
-
-    //   //(发送者允许接收者接收他们的出席信息)，即别人同意你加他为好友
-    //   if (e.type === "subscribed") {
-    //   }
-
-    //   //（发送者取消订阅另一个实体的出席信息）,即删除现有好友
-    //   if (e.type === "unsubscribe") {
-    //   }
-
-    //   //（订阅者的请求被拒绝或以前的订阅被取消），即对方单向的删除了好友
-    //   if (e.type === "unsubscribed") {
-    //   }
-    // };
-
-    // ============添加好友============
-    // 添加好友
-    // var addFriends = function() {
-    //   this.$imConn.subscribe({
-    //     to: "username",
-    //     // Demo里面接收方没有展现出来这个message，在status字段里面
-    //     message: "加个好友呗!"
-    //   });
-    // };
   },
   created() {
-    console.log(this.chatList, 111);
-    let that = this;
-    console.log(55555);
-
-    //获取我的好友列表
-    console.log(55555);
-    setTimeout(function() {
-      console.log(121);
-      console.log(that.$imConn.getRoster);
-      that.$imConn.getRoster({
-        success: function(roster) {
-          let that = this;
-          this.chatList = roster;
-          console.log(roster);
-          // for (var i = 0, l = roster.length; i < l; i++) {
-          //   console.log(22121212121);
-          //   var ros = roster[i];
-          //   console.log(ros);
-          //   //ros.subscription值为both/to为要显示的联系人，此处与APP需保持一致，才能保证两个客户端登录后的好友列表一致
-          //   if (ros.subscription === "both" || ros.subscription === "to") {
-          //     this.chatList.push(ros);
-          //     console.log(this.chatList);
-          //   }
-          // }
-          // console.log(this.chatList);
-        }
-      });
-    }, 2000);
-
-    console.log(this.chatList);
+    var that = this;
+    // console.log(localStorage["ry_userId"]);
+    // console.log(this.$store.state.rcloud_userId);
+    // this.userId = this.$store.state.rcloud_userId;
+    let t = setInterval(function() {
+      console.log(that.$store.state.rcloud_userId);
+      if (that.$store.state.rcloud_userId != null) {
+        that.userId = that.$store.state.rcloud_userId;
+        that.getConversationList();
+        that.getUnreadCount();
+        that.getTotalUnreadCount();
+        clearInterval(t);
+      }
+    }, 1000);
   },
   methods: {
-    // 单聊发送文本消息
-    sendPrivateText() {
-      var id = this.$imConn.getUniqueId(); // 生成本地消息id
-      var msg = new WebIM.message("txt", id); // 创建文本消息
-      msg.set({
-        msg: "message content", // 消息内容
-        to: "username", // 接收消息对象（用户id）
-        roomType: false,
-        success: function(id, serverMsgId) {
-          console.log("send private text Success");
-        },
-        fail: function(e) {
-          console.log("Send private text error");
-        }
+    scrollTop() {
+      setTimeout(function() {
+        var s = document.querySelector(".message").clientHeight;
+        var t = document.querySelector(".message ul").scrollHeight;
+        var n = document.querySelector(".message ul").scrollTop;
+        document.querySelector(".message").scrollTop = t;
+      }, 100);
+
+      // console.log(document.querySelector(".message").scrollTop);
+      // console.log(s, t, n);
+    },
+    sendTextMessage(textContent) {
+      console.log(textContent);
+      var that = this;
+      var msg = new RongIMLib.TextMessage({
+        content: textContent,
+        extra: "附加信息"
       });
-      msg.body.chatType = "singleChat";
-      this.$imConn.send(msg.body);
-    },
-    //收到联系人订阅请求的处理方法，具体的type值所对应的值请参考xmpp协议规范
-    handlePresence(e) {
-      //对方收到请求加为好友
-      if (e.type === "subscribe") {
-        /*同意添加好友操作的实现方法*/
-        this.$imConn.subscribed({
-          to: "username",
-          message: "[resp:true]"
-        });
-        this.$imConn.subscribe({
-          //需要反向添加对方好友
-          to: e.from,
-          message: "[resp:true]"
-        });
-        /*拒绝添加好友的方法处理*/
-        this.$imConn.unsubscribed({
-          to: "username",
-          message: "rejectAddFriend"
-        });
-      }
-    },
-    // 删除好友
-    removeFriends() {
-      this.$imConn.removeRoster({
-        to: "username",
-        success: function() {
-          // 删除成功
-          this.$imConn.unsubscribed({
-            to: "username"
-          });
+      var conversationtype = RongIMLib.ConversationType.PRIVATE; // 单聊,其他会话选择相应的消息类型即可。
+      var targetId = that.targetId; // 目标 Id
+      RongIMClient.getInstance().sendMessage(conversationtype, targetId, msg, {
+        onSuccess: function(message) {
+          console.log(message);
+          for (let i = 0; i < that.chatList.length; i++) {
+            if (that.chatList[i].check) {
+              that.chatList[i].record.push(message);
+            }
+          }
+          that.scrollTop();
+          console.log(that.chatList);
+          //message 为发送的消息对象并且包含服务器返回的消息唯一Id和发送消息时间戳
+          console.log("Send successfully");
         },
-        error: function() {
-          // 删除失败
+        onError: function(errorCode, message) {
+          var info = "";
+          switch (errorCode) {
+            case RongIMLib.ErrorCode.TIMEOUT:
+              info = "超时";
+              break;
+            case RongIMLib.ErrorCode.UNKNOWN_ERROR:
+              info = "未知错误";
+              break;
+            case RongIMLib.ErrorCode.REJECTED_BY_BLACKLIST:
+              info = "在黑名单中，无法向对方发送消息";
+              break;
+            case RongIMLib.ErrorCode.NOT_IN_DISCUSSION:
+              info = "不在讨论组中";
+              break;
+            case RongIMLib.ErrorCode.NOT_IN_GROUP:
+              info = "不在群组中";
+              break;
+            case RongIMLib.ErrorCode.NOT_IN_CHATROOM:
+              info = "不在聊天室中";
+              break;
+            default:
+              info = x;
+              break;
+          }
+          console.log("发送失败:" + info);
         }
       });
     },
     sumbit() {
-      //发送信息
-      alert(11);
+      this.sendTextMessage(this.text);
+      this.clearUnreadCount(this.targetId);
     },
-    select(id, index) {
+
+    //清除当前未读数
+    clearUnreadCount(targetId) {
+      /*
+	 	此方法清除当前端的未读数，并不会多端同步，
+	 	多端同步需要发送 SyncReadStatusMessage：http://support.rongcloud.cn/kb/NjE0
+	 */
+
+      var start = Date.now();
+      var conversationtype = RongIMLib.ConversationType.PRIVATE; // 单聊,其他会话选择相应的消息类型即可。
+      RongIMClient.getInstance().clearUnreadCount(conversationtype, targetId, {
+        onSuccess: function() {
+          console.log("清除未读数成功", "success", start);
+        },
+        onError: function(error) {
+          console.log("清除未读数失败", error, start);
+        }
+      });
+    },
+    //获取单一用户消息条数
+    getUnreadCount() {
+      var that = this;
+      /*
+		阅读时间戳缓存在 localStorage 中，消息状态根据发送时间和阅读时间戳对比判断
+		每次接受新消息后通过重新调用此方法计算
+	 */
+      var start = new Date().getTime();
+      console.log(this.$userId);
+      RongIMClient.getInstance().getUnreadCount(
+        "PRIVATE",
+        localStorage["ry_userId"],
+        {
+          onSuccess: function(count) {
+            console.log("获取会话未读数成功", count, start);
+
+            // console.log("获取会话未读数成功", count, start);
+          },
+          onError: function(error) {
+            // console.log("获取会话未读数失败", error, start);
+          }
+        }
+      );
+    },
+    //获取未读消息总条数
+    getTotalUnreadCount() {
+      var that = this;
+      /*
+		阅读时间戳缓存在 localStorage 中，消息状态根据发送时间和阅读时间戳对比判断
+		每次接受新消息后通过重新调用此方法计算
+	 */
+      var start = new Date().getTime();
+      RongIMClient.getInstance().getTotalUnreadCount({
+        onSuccess: function(count) {
+          count == 0
+            ? that.$notify({
+                title: "成功",
+                message: "您暂无未读消息",
+                type: "success"
+              })
+            : that.$notify({
+                title: "成功",
+                message: "您有" + count + "条信息未读",
+                type: "success"
+              });
+
+          // console.log("获取总未读数成功", count, start);
+        },
+        onError: function(error) {
+          // console.log("获取总未读数失败", error, start);
+        }
+      });
+    },
+    getConversationList() {
+      var that = this;
+      /*
+	文档：http://www.rongcloud.cn/docs/web_api_demo.html#会话接口
+		http://www.rongcloud.cn/docs/web.html#5_2、同步会话列表
+		http://www.rongcloud.cn/docs/api/js/Conversation.html
+
+	历史消息云存储开通位置：https://developer.rongcloud.cn/service/roam/rXxI4IAJjxRAD72SpQ==
+
+	注意事项：
+		1：一定一定一定要先开通 历史消息云存储 功能，本服务收费，测试环境可免费开通
+		2：只有发过消息才能生成会话
+	*/
+
+      var conversationTypes = null; //具体格式设置需要补充
+      var limit = null; //获取会话的数量，不传或传null为全部，暂不支持分页
+      var start = new Date().getTime();
+      RongIMClient.getInstance().getConversationList(
+        {
+          onSuccess: function(list) {
+            console.log(list);
+            for (let i = 0; i < list.length - 1; i++) {
+              list[i].number = 0;
+              list[i].check = false;
+              list[i].record = [];
+              for (let n = i + 1; n < list.length; n++) {
+                if (list[i].targetId == list[n].targetId) {
+                  list[i].number++;
+                  console.log(list[i].number);
+                  console.log(555);
+                  list.splice(n, 1); //console.log(arr[j]);
+                  n--;
+                }
+              }
+            }
+            console.log(list);
+            list.sort(function(a, b) {
+              return a.sentTime > b.sentTime;
+            });
+
+            var title = "成功获取 " + list.length + " 个会话";
+            // console.log(list);
+            list[that.activeIndex].check = true;
+            that.targetId = list[that.activeIndex].targetId;
+            that.chatList = list;
+            // that.$notify({
+            //   title: "成功",
+            //   message: title,
+            //   type: "success"
+            // });
+            // console.log(title, list, start);
+          },
+          onError: function(error) {
+            // console.log("获取会话失败", error, start);
+          }
+        },
+        conversationTypes,
+        limit
+      );
+    },
+    select(targetId, index) {
+      this.targetId = targetId;
+
       this.activeIndex = index;
+
+      for (let i = 0; i < this.chatList.length; i++) {
+        this.chatList[i].check = false;
+      }
+      this.chatList[index].check = true;
+      this.clearUnreadCount(targetId);
+      this.scrollTop();
     },
     upload() {
       document.querySelector(".img-upload input").click();

@@ -5,8 +5,7 @@ import chatRoom from '@/pages/chatRoom'
 Vue.use(Router)
 
 export default new Router({
-  routes: [
-    {
+  routes: [{
       path: '/',
       name: '用户登录',
       component: index

@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <router-view/>
+    <router-view />
   </div>
 </template>
 
@@ -118,6 +118,9 @@ a {
 }
 
 [v-cloak] {
+  display: none;
+}
+::-webkit-scrollbar {
   display: none;
 }
 

@@ -46,7 +46,7 @@ export default {
     };
   },
   mounted() {
-    localStorage.removeItem("ACCESS_TOKEN");
+    // localStorage.removeItem("ACCESS_TOKEN");
   },
   methods: {
     // 提交账户名和密码
@@ -71,6 +71,14 @@ export default {
                 );
                 localStorage.setItem("userid", response.data.data.userInfo.id);
                 localStorage.setItem("ms_username", this.ruleForm.username);
+                localStorage.setItem(
+                  "ms_viaUrl",
+                  response.data.data.imUserInfo.icon
+                );
+                localStorage.setItem(
+                  "ms_nickName",
+                  response.data.data.imUserInfo.nickName
+                );
                 this.$message({
                   message: "登陆成功!",
                   type: "success",
@@ -79,20 +87,13 @@ export default {
                 // console.log()
                 localStorage.setItem(
                   "hx_userName",
-                  response.data.data.userInfo.nickname
+                  response.data.data.imUserInfo.userName
                 );
 
                 localStorage.setItem(
                   "hx_pwd",
-                  response.data.data.userInfo.password
+                  response.data.data.imUserInfo.password
                 );
-
-                this.$imConn.open({
-                  apiUrl: WebIM.config.apiURL,
-                  user: response.data.data.userInfo.nickname,
-                  pwd: response.data.data.userInfo.password,
-                  appKey: WebIM.config.appkey
-                });
                 this.$router.push("/index");
               } else {
                 this.$message.error("账号密码错误");
