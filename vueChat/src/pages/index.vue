@@ -46,6 +46,7 @@ export default {
     };
   },
   mounted() {
+    RongIMLib.RongIMEmoji.init();
     // localStorage.removeItem("ACCESS_TOKEN");
   },
   methods: {
@@ -99,6 +100,7 @@ export default {
                 var token =
                   "Cg089/KnN+UG5zDbfNaT8nxpRjANxKgfakOnYLFljI84o3S6vq9b1qU38HtoHDQNsup+oz7gz38grlBqS2ugAw==";
                 RongIMLib.RongIMClient.init(appKey);
+
                 //此接口必须在init()方法之后，连接融云服务器 connect 之前调用。
                 RongIMClient.getInstance().hasRemoteUnreadMessages(token, {
                   onSuccess: function(hasMessage) {

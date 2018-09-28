@@ -4,7 +4,7 @@
       <div class="sidebar">
         <div class="card">
           <header>
-            <img class="avatar" width="40" height="40" alt="coffce" v-lazy="adminLogo" :key="adminLogo">
+            <img class="avatar" width="40" height="40" alt="coffce" :src="adminLogo">
             <p class="name">{{userId}}</p>
           </header>
           <footer>
@@ -17,7 +17,6 @@
               <el-badge :value="item.unreadMessageCount" class="item" :hidden="item.unreadMessageCount==0">
                 <img class="avatar" width="30" height="30" alt="示例介绍" v-lazy="item.avarImg">
               </el-badge>
-
                 <p class="name">{{item.targetId}}</p>
             </li>
           </ul>
@@ -34,11 +33,11 @@
               <div class="other" :class="checkitem.senderUserId==userId?'self':''">
                 <img class="avatar" width="30" height="30" v-lazy="checkitem.avarLogo" :key="checkitem.avarLogo">
                 <div class="text">
-                  <p v-if="checkitem.objectName=='RC:TxtMsg'">
-                    {{checkitem.content.content}}
+                  <p v-if="checkitem.messageType=='TextMessage'" v-html="checkitem.content.content">
+
                   </p>
-                  <div class="img" v-else>
-                    <img v-lazy="checkitem.img" alt="">
+                  <div class="img" v-if="checkitem.messageType=='ImageMessage'">
+                    <img :src="checkitem.content.imageUri" alt="">
                   </div>
                   </div>
                 </div>
@@ -49,6 +48,15 @@
           <el-upload class="img-upload" style="display:none" :action="sevarUrl" :on-remove="upremove" :on-success="upSuccess">
           </el-upload>
           <i class="el-icon-picture" @click="upload"></i>
+          <el-popover width="400" trigger="click" content="">
+            <!-- <el-button slot="reference">content</el-button> -->
+            <div>
+              <span v-for="(item,index) in list" :key="index" class="point" @click="selectEmoil(item)" v-html="item.node"></span>
+            </div>
+            <el-button type="text" slot="reference">表情</el-button>
+
+          </el-popover>
+
         </div>
         <div id="text">
           <textarea placeholder="按 Ctrl + Enter 发送" @keyup.ctrl.13="sumbit()" v-model="text"></textarea>
@@ -105,8 +113,9 @@ export default {
       adminTitle: "",
       name: "",
       text: "",
+      list: null,
       serchData: "",
-      sevarUrl: "",
+      sevarUrl: this.$api + "/upload/singleUploadImg", // 这里写你要上传的图片服务器地址
       adminLogo: "../../static/1.jpg",
       userId: "加载中...",
       personlOne: "../../static/2.png",
@@ -132,7 +141,11 @@ export default {
   },
   mounted() {
     var that = this;
-    console.log(that);
+    var list = RongIMLib.RongIMEmoji.list;
+    for (let n = 0; n < list.length; n++) {
+      list[n].node = RongIMLib.RongIMEmoji.emojiToHTML(list[n].emoji);
+    }
+    this.list = list;
     var token =
       "Cg089/KnN+UG5zDbfNaT8nxpRjANxKgfakOnYLFljI84o3S6vq9b1qU38HtoHDQNsup+oz7gz38grlBqS2ugAw==";
     RongIMClient.setConnectionStatusListener({
@@ -171,75 +184,90 @@ export default {
       // 接收到的消息
       onReceived: function(message) {
         // 判断消息类型
-        console.log(RongIMClient.MessageType.TextMessage);
-        switch (message.messageType) {
-          case RongIMClient.MessageType.TextMessage:
-            console.log(message.content.content);
-            if (that.$route.name == "聊天室") {
+        if (that.$route.name == "聊天室") {
+          switch (message.messageType) {
+            case RongIMClient.MessageType.TextMessage:
               that.$notify({
-                title: "提示",
-                message: message.targetId + "发来一条信息",
+                message: message.senderUserId + "发来一条文字信息",
                 type: "success"
               });
               for (let n = 0; n < that.chatList.length; n++) {
-                if (that.chatList[n].targetId == message.targetId) {
+                if (that.chatList[n].targetId == message.senderUserId) {
                   message.sentTime = timeFormatNotime(message.sentTime);
+
+                  message.content.content = RongIMLib.RongIMEmoji.emojiToHTML(
+                    RongIMLib.RongIMEmoji.symbolToEmoji(message.content.content)
+                  );
+
                   that.chatList[n].record.push(message);
                 }
               }
               that.scrollTop();
-            } else {
+              // alert(1);
+              // message.content.content => 消息内容
+              break;
+            case RongIMClient.MessageType.VoiceMessage:
+              // 对声音进行预加载
+              // message.content.content 格式为 AMR 格式的 base64 码
+              break;
+            case RongIMClient.MessageType.ImageMessage:
               that.$notify({
-                title: "提示",
-                message: "你有新的消息,请前往聊天室查看",
+                message: message.senderUserId + "发来一条图片信息",
                 type: "success"
               });
-            }
+              for (let n = 0; n < that.chatList.length; n++) {
+                if (that.chatList[n].targetId == message.senderUserId) {
+                  message.sentTime = timeFormatNotime(message.sentTime);
+                  that.chatList[n].record.push(message);
+                }
+              }
+              // setTimeout(function(){
+              that.scrollTop();
+              // },1000)
 
-            // alert(1);
-            // message.content.content => 消息内容
-            break;
-          case RongIMClient.MessageType.VoiceMessage:
-            // 对声音进行预加载
-            // message.content.content 格式为 AMR 格式的 base64 码
-            break;
-          case RongIMClient.MessageType.ImageMessage:
-            // message.content.content => 图片缩略图 base64。
-            // message.content.imageUri => 原图 URL。
-            break;
-          case RongIMClient.MessageType.DiscussionNotificationMessage:
-            // message.content.extension => 讨论组中的人员。
-            break;
-          case RongIMClient.MessageType.LocationMessage:
-            // message.content.latiude => 纬度。
-            // message.content.longitude => 经度。
-            // message.content.content => 位置图片 base64。
-            break;
-          case RongIMClient.MessageType.RichContentMessage:
-            // message.content.content => 文本消息内容。
-            // message.content.imageUri => 图片 base64。
-            // message.content.url => 原图 URL。
-            break;
-          case RongIMClient.MessageType.InformationNotificationMessage:
+              // message.content.content => 图片缩略图 base64。
+              // message.content.imageUri => 原图 URL。
+              break;
+            case RongIMClient.MessageType.DiscussionNotificationMessage:
+              // message.content.extension => 讨论组中的人员。
+              break;
+            case RongIMClient.MessageType.LocationMessage:
+              // message.content.latiude => 纬度。
+              // message.content.longitude => 经度。
+              // message.content.content => 位置图片 base64。
+              break;
+            case RongIMClient.MessageType.RichContentMessage:
+              // message.content.content => 文本消息内容。
+              // message.content.imageUri => 图片 base64。
+              // message.content.url => 原图 URL。
+              break;
+            case RongIMClient.MessageType.InformationNotificationMessage:
+              // do something...
+              break;
+            case RongIMClient.MessageType.ContactNotificationMessage:
+              // do something...
+              break;
+            case RongIMClient.MessageType.ProfileNotificationMessage:
+              // do something...
+              break;
+            case RongIMClient.MessageType.CommandNotificationMessage:
+              // do something...
+              break;
+            case RongIMClient.MessageType.CommandMessage:
+              // do something...
+              break;
+            case RongIMClient.MessageType.UnknownMessage:
+              // do something...
+              break;
+            default:
             // do something...
-            break;
-          case RongIMClient.MessageType.ContactNotificationMessage:
-            // do something...
-            break;
-          case RongIMClient.MessageType.ProfileNotificationMessage:
-            // do something...
-            break;
-          case RongIMClient.MessageType.CommandNotificationMessage:
-            // do something...
-            break;
-          case RongIMClient.MessageType.CommandMessage:
-            // do something...
-            break;
-          case RongIMClient.MessageType.UnknownMessage:
-            // do something...
-            break;
-          default:
-          // do something...
+          }
+        } else {
+          that.$notify({
+            title: "提示",
+            message: "你有新的消息,请前往聊天室查看",
+            type: "success"
+          });
         }
       }
     });
@@ -311,32 +339,23 @@ export default {
   },
   created() {
     var that = this;
-    // console.log(localStorage["ry_userId"]);
-    // console.log(this.$store.state.rcloud_userId);
-    // this.userId = this.$store.state.rcloud_userId;
-    // let t = setInterval(function() {
-    //   console.log(that.$store.state.rcloud_userId);
-    //   if (that.$store.state.rcloud_userId != null) {
-    //     that.userId = that.$store.state.rcloud_userId;
-    //     that.getConversationList();
-    //     that.getUnreadCount();
-    //     that.getTotalUnreadCount();
-    //     clearInterval(t);
-    //   }
-    // }, 1000);
   },
   destroyed() {
     var start = new Date().getTime();
     RongIMClient.getInstance().disconnect();
   },
   methods: {
+    selectEmoil(item) {
+      console.log(item);
+      this.text = this.text + item.emoji;
+    },
     scrollTop() {
       setTimeout(function() {
         var s = document.querySelector(".message").clientHeight;
         var t = document.querySelector(".message ul").scrollHeight;
         var n = document.querySelector(".message ul").scrollTop;
         document.querySelector(".message").scrollTop = t;
-      }, 100);
+      }, 1000);
 
       // console.log(document.querySelector(".message").scrollTop);
       // console.log(s, t, n);
@@ -356,6 +375,10 @@ export default {
           for (let i = 0; i < that.chatList.length; i++) {
             if (that.chatList[i].check) {
               message.sentTime = timeFormatNotime(message.sentTime);
+              message.content.content = RongIMLib.RongIMEmoji.emojiToHTML(
+                message.content.content
+              );
+              console.log(message.content.content);
               that.chatList[i].record.push(message);
             }
           }
@@ -468,10 +491,16 @@ export default {
                 console.log(list, 222222222);
                 for (let s = 0; s < list.length; s++) {
                   list[s].sentTime = timeFormatNotime(list[s].sentTime);
+                  list[s].content.content = RongIMLib.RongIMEmoji.emojiToHTML(
+                    RongIMLib.RongIMEmoji.symbolToEmoji(list[s].content.content)
+                  );
                   that.chatList[n].record.unshift(list[s]);
                 }
-
+                // if (list[s].messageType == "ImageMessage") {
+                // setTimeout(function() {
                 that.scrollTop();
+                // }, 1000);
+                // }
                 // showResult("获取历史消息成功", list, start);
               },
               onError: function(error) {
@@ -591,12 +620,79 @@ export default {
       document.querySelector(".img-upload input").click();
     },
     //图片上传成功函数
-    upSuccess(response, file, fileList) {},
+    upSuccess(response, file, fileList) {
+      var that = this;
+      console.log(response);
+      console.log(response.code == 1);
+      if (response.code == 1 && response.msg == "success") {
+        var base64Str = "";
+        var imageUri = response.data.imgUrl; // 上传到自己服务器的 URL。
+        var msg = new RongIMLib.ImageMessage({
+          content: base64Str,
+          imageUri: imageUri
+        });
+        var conversationtype = RongIMLib.ConversationType.PRIVATE; // 单聊,其他会话选择相应的消息类型即可。
+        var targetId = that.targetId; // 目标 Id
+        RongIMClient.getInstance().sendMessage(
+          conversationtype,
+          targetId,
+          msg,
+          {
+            onSuccess: function(message) {
+              console.log(message);
+              for (let i = 0; i < that.chatList.length; i++) {
+                if (that.chatList[i].check) {
+                  message.sentTime = timeFormatNotime(message.sentTime);
+                  // console.log(message.content.content);
+                  that.chatList[i].record.push(message);
+                }
+              }
+              that.scrollTop();
+              //message 为发送的消息对象并且包含服务器返回的消息唯一Id和发送消息时间戳
+              console.log("Send successfully");
+            },
+            onError: function(errorCode, message) {
+              var info = "";
+              switch (errorCode) {
+                case RongIMLib.ErrorCode.TIMEOUT:
+                  info = "超时";
+                  break;
+                case RongIMLib.ErrorCode.UNKNOWN_ERROR:
+                  info = "未知错误";
+                  break;
+                case RongIMLib.ErrorCode.REJECTED_BY_BLACKLIST:
+                  info = "在黑名单中，无法向对方发送消息";
+                  break;
+                case RongIMLib.ErrorCode.NOT_IN_DISCUSSION:
+                  info = "不在讨论组中";
+                  break;
+                case RongIMLib.ErrorCode.NOT_IN_GROUP:
+                  info = "不在群组中";
+                  break;
+                case RongIMLib.ErrorCode.NOT_IN_CHATROOM:
+                  info = "不在聊天室中";
+                  break;
+                default:
+                  info = x;
+                  break;
+              }
+              console.log("发送失败:" + info);
+            }
+          }
+        );
+      }
+    },
     upremove(file, fileList) {}
   }
 };
 </script>
 <style scoped>
+.point {
+  cursor: pointer;
+}
+.point:hover {
+  background-color: #ddd;
+}
 .wrap {
   margin: 20px auto;
   width: 800px;
