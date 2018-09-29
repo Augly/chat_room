@@ -71,6 +71,11 @@ axios.interceptors.response.use(function (response) {
   return Promise.reject(error);
 });
 axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
+//=============设置浏览器不更新机制=============
+axios.defaults.headers.common["If-Modified-Since"] = '0'
+axios.defaults.headers.common["Cache-Control"] = 'no-cache'
+//================ end =============
+// console.log(axios.defaults.headers)
 Vue.config.productionTip = false
 Vue.use(ElementUI);
 Vue.prototype.$ajax = axios
